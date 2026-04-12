@@ -79,6 +79,7 @@ http://13.124.109.82.nip.io/ai/conversation
 ```
 
 ## CI/CD 파이프라인 (Jenkins)
+<img width="2950" height="1440" alt="Gemini_Generated_Image_ynjbbeynjbbeynjb" src="https://github.com/user-attachments/assets/d53c8547-453a-4215-add9-8edbae5f975d" />
 
 ### 파이프라인 구성
 
