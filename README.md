@@ -1,4 +1,8 @@
-# Conversation Service - 배포 가이드
+## 🚀 Conversation Service (MLOps 기반 자동 배포 시스템)
+
+CI/CD + Kubernetes 기반으로  
+코드 품질 검증 → 자동 PR → 자동 배포까지 연결된  
+운영형 AI 서비스 배포 파이프라인 프로젝트
 <img width="2816" height="1376" alt="image 105" src="https://github.com/user-attachments/assets/c711e400-9374-407f-8899-8ab85f2ab8b3" />
 
 이 문서는 Conversation Service의 배포 방법을 설명합니다. 
@@ -9,88 +13,37 @@
 - **CI/CD**: Jenkins
 - **포트**: 7003 (Gunicorn), 8100 (Kubernetes Service)
 
-## Docker 배포
+## 🎯 프로젝트 목적
 
-### Docker 이미지 빌드
+기존 배포 방식은 다음 문제가 있음:
 
-```bash
-docker build -t yorange50/conversation:latest .
-```
+- 코드 품질 검증 없이 배포됨
+- 성능 저하 버전이 그대로 운영 반영됨
+- 수동 배포로 인해 실수 발생 가능
 
-### Docker Compose 실행
+→ 이를 해결하기 위해
 
-```bash
-docker-compose up -d
-```
+- SonarCloud 기반 품질 게이트
+- 자동 PR 생성
+- Kubernetes 자동 배포
 
-### Docker 이미지 실행
-
-```bash
-docker run -d \
-  -p 7003:7003 \
-  --name conversation-service \
-  yorange50/conversation:latest
-```
-
-## Kubernetes (k3s) 배포
-
-### 배포 파일
-
-- `k3s-app.yaml`: Kubernetes 배포 매니페스트 파일
-
-### 배포 명령어
-
-```bash
-# 배포 실행
-kubectl apply -f k3s-app.yaml
-
-# 배포 상태 확인
-kubectl rollout status deployment/conversation --timeout=5m
-
-# Pod 상태 확인
-kubectl get pods -l app=conversation
-
-# 서비스 확인
-kubectl get service conversation-service
-```
-
-### 배포 구성
-
-- **Deployment**: `conversation`
-  - Replicas: 2
-  - Container Port: 7003
-  - Image: `yorange50/conversation:latest`
-  - Resources:
-    - Requests: memory 256Mi, cpu 250m
-    - Limits: memory 512Mi, cpu 500m
-
-- **Service**: `conversation-service`
-  - Type: ClusterIP
-  - Port: 8100 → Target Port: 7003
-
-- **Ingress**: `flask-conversation-ingress`
-  - Host: `13.124.109.82.nip.io`
-  - Path: `/ai/conversation`
-
-### 접속 URL
-
-```
-http://13.124.109.82.nip.io/ai/conversation
-```
+까지 연결된 CI/CD 파이프라인을 구축
 
 ## CI/CD 파이프라인 (Jenkins)
 <img width="2950" height="1440" alt="Gemini_Generated_Image_ynjbbeynjbbeynjb" src="https://github.com/user-attachments/assets/d53c8547-453a-4215-add9-8edbae5f975d" />
 
-### 파이프라인 구성
+## 🔄 CI/CD 파이프라인
 
-1. **Checkout**: GitHub 소스 체크아웃
-2. **SonarCloud Analysis**: 코드 품질 분석
-3. **Quality Gate**: 품질 게이트 확인
-4. **Auto Create PR**: develop → main 자동 PR 생성
-5. **Build Docker Image**: Docker 이미지 빌드
-6. **Login & Push Docker Image**: Docker Hub에 이미지 푸시
-7. **Sync YAML to Server**: k3s-app.yaml 서버 전송
-8. **Deploy to k3s Cluster**: Kubernetes 배포 실행
+코드 변경이 발생하면 자동으로 다음 과정이 실행됩니다:
+
+1. GitHub Webhook → Jenkins 트리거
+2. Pytest → 기능 검증
+3. SonarCloud → 코드 품질 분석
+4. Quality Gate → 기준 미달 시 배포 중단
+5. Docker Image 빌드 및 푸시
+6. Kubernetes(k3s) 자동 배포
+
+→ 품질이 보장된 코드만 운영 환경에 반영됩니다
 
 ### 브랜치별 동작
 
@@ -104,52 +57,19 @@ http://13.124.109.82.nip.io/ai/conversation
   - Docker 이미지 빌드 및 푸시
   - k3s 클러스터에 자동 배포
 
-### 환경 변수
+## 🧱 아키텍처 개요
 
-Jenkins에서 설정된 환경 변수:
-- `DOCKER_IMAGE`: `yorange50/conversation`
-- `DEPLOY_SERVER`: `13.124.109.82`
-- `DEPLOY_PATH`: `/home/ubuntu/k3s-deploy`
+- GitHub → 코드 push
+- Jenkins → CI/CD 실행
+- SonarCloud → 코드 품질 분석
+- Docker → 이미지 빌드
+- Kubernetes(k3s) → 서비스 배포
+- Prometheus/Grafana → 모니터링
 
-## 배포 확인
+## 📈 결과
 
-### Kubernetes 리소스 확인
+- 품질 기준 미달 코드 자동 차단
+- 수동 배포 제거 → 실수 감소
+- 배포 시간 단축 및 안정성 향상
 
-```bash
-# Deployment 확인
-kubectl get deployment conversation -o wide
-
-# Pod 확인
-kubectl get pods -l app=conversation
-
-# Service 확인
-kubectl get service conversation-service
-
-# Ingress 확인
-kubectl get ingress flask-conversation-ingress
-```
-
-### 로그 확인
-
-```bash
-# Pod 로그 확인
-kubectl logs -f -l app=conversation
-
-# 특정 Pod 로그 확인
-kubectl logs <pod-name>
-```
-
-## 롤백
-
-배포에 문제가 발생한 경우:
-
-```bash
-# 이전 버전으로 롤백
-kubectl rollout undo deployment/conversation
-
-# 특정 리비전으로 롤백
-kubectl rollout undo deployment/conversation --to-revision=<revision-number>
-
-# 롤백 히스토리 확인
-kubectl rollout history deployment/conversation
-```
+→ 단순 배포가 아닌 “운영형 DevOps 시스템” 구축
