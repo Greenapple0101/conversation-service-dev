@@ -1,4 +1,5 @@
 # Conversation Service - 배포 가이드
+<img width="2816" height="1376" alt="image 105" src="https://github.com/user-attachments/assets/c711e400-9374-407f-8899-8ab85f2ab8b3" />
 
 이 문서는 Conversation Service의 배포 방법을 설명합니다. 
 ## 배포 환경
